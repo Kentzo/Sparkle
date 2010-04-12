@@ -44,7 +44,10 @@
 
 - (NSString *)name
 {
-	NSString *name = [bundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+	NSString *name = [bundle objectForInfoDictionaryKey:@"SUUpdaterDisplayName"];
+	if (name) return name;    
+    
+	name = [bundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
 	if (name) return name;
 	
 	name = [self objectForInfoDictionaryKey:@"CFBundleName"];
@@ -145,37 +148,62 @@
 
 - (id)objectForUserDefaultsKey:(NSString *)defaultName
 {
+    NSString *potentialBundleId = [bundle objectForInfoDictionaryKey:@"SUUpdaterBundleIdentifier"];    
+    
 	// Under Tiger, CFPreferencesCopyAppValue doesn't get values from NSRegistrationDomain, so anything
 	// passed into -[NSUserDefaults registerDefaults:] is ignored.  The following line falls
 	// back to using NSUserDefaults, but only if the host bundle is the main bundle.
-	if (bundle == [NSBundle mainBundle])
+	if ((potentialBundleId == nil) && (bundle == [NSBundle mainBundle]))
 		return [[NSUserDefaults standardUserDefaults] objectForKey:defaultName];
 	
-	CFPropertyListRef obj = CFPreferencesCopyAppValue((CFStringRef)defaultName, (CFStringRef)[bundle bundleIdentifier]);
+    NSString *bundleIdToUse = nil;
+    if (potentialBundleId != nil) {
+        bundleIdToUse = potentialBundleId;
+    } 
+    else {
+        bundleIdToUse = [bundle bundleIdentifier];
+    }    
+	CFPropertyListRef obj = CFPreferencesCopyAppValue((CFStringRef)defaultName, (CFStringRef)bundleIdToUse);
 	return [(id)CFMakeCollectable(obj) autorelease];
 }
 
 - (void)setObject:(id)value forUserDefaultsKey:(NSString *)defaultName;
 {
+    NSString *potentialBundleId = [bundle objectForInfoDictionaryKey:@"SUUpdaterBundleIdentifier"];
 	// If we're using a .app, we'll use the standard user defaults mechanism; otherwise, we have to get CF-y.
-	if (bundle == [NSBundle mainBundle])
+	if ((potentialBundleId == nil) && (bundle == [NSBundle mainBundle]))
 	{
 		[[NSUserDefaults standardUserDefaults] setObject:value forKey:defaultName];
 	}
 	else
 	{
-		CFPreferencesSetValue((CFStringRef)defaultName, value, (CFStringRef)[bundle bundleIdentifier],  kCFPreferencesCurrentUser,  kCFPreferencesAnyHost);
-		CFPreferencesSynchronize((CFStringRef)[bundle bundleIdentifier], kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+        NSString *bundleIdToUse = nil;
+        if (potentialBundleId != nil) {
+            bundleIdToUse = potentialBundleId;
+        } 
+        else {
+            bundleIdToUse = [bundle bundleIdentifier];
+        }
+		CFPreferencesSetValue((CFStringRef)defaultName, value, (CFStringRef)bundleIdToUse,  kCFPreferencesCurrentUser,  kCFPreferencesAnyHost);
+		CFPreferencesSynchronize((CFStringRef)bundleIdToUse, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 	}
 }
 
 - (BOOL)boolForUserDefaultsKey:(NSString *)defaultName
 {
-	if (bundle == [NSBundle mainBundle])
+    NSString *potentialBundleId = [bundle objectForInfoDictionaryKey:@"SUUpdaterBundleIdentifier"];
+	if ((potentialBundleId == nil) && (bundle == [NSBundle mainBundle]))
 		return [[NSUserDefaults standardUserDefaults] boolForKey:defaultName];
 	
+    NSString *bundleIdToUse = nil;
+    if (potentialBundleId != nil) {
+        bundleIdToUse = potentialBundleId;
+    } 
+    else {
+        bundleIdToUse = [bundle bundleIdentifier];
+    }
 	BOOL value;
-	CFPropertyListRef plr = CFPreferencesCopyAppValue((CFStringRef)defaultName, (CFStringRef)[bundle bundleIdentifier]);
+	CFPropertyListRef plr = CFPreferencesCopyAppValue((CFStringRef)defaultName, (CFStringRef)bundleIdToUse);
 	if (plr == NULL)
 		value = NO;
 	else
@@ -188,6 +216,7 @@
 
 - (void)setBool:(BOOL)value forUserDefaultsKey:(NSString *)defaultName
 {
+    NSString *potentialBundleId = [bundle objectForInfoDictionaryKey:@"SUUpdaterBundleIdentifier"];
 	// If we're using a .app, we'll use the standard user defaults mechanism; otherwise, we have to get CF-y.
 	if (bundle == [NSBundle mainBundle])
 	{
@@ -195,8 +224,15 @@
 	}
 	else
 	{
-		CFPreferencesSetValue((CFStringRef)defaultName, (CFBooleanRef)[NSNumber numberWithBool:value], (CFStringRef)[bundle bundleIdentifier],  kCFPreferencesCurrentUser,  kCFPreferencesAnyHost);
-		CFPreferencesSynchronize((CFStringRef)[bundle bundleIdentifier], kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+        NSString *bundleIdToUse = nil;
+        if (potentialBundleId != nil) {
+            bundleIdToUse = potentialBundleId;
+        } 
+        else {
+            bundleIdToUse = [bundle bundleIdentifier];
+        }
+		CFPreferencesSetValue((CFStringRef)defaultName, (CFBooleanRef)[NSNumber numberWithBool:value], (CFStringRef)bundleIdToUse,  kCFPreferencesCurrentUser,  kCFPreferencesAnyHost);
+		CFPreferencesSynchronize((CFStringRef)bundleIdToUse, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 	}
 }
 
